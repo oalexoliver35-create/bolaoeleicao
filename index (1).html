@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Bolão da Urna 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: graphite "urna" header with a little screen + countdown; tabs; state chip grid by region; question panel; keys styled like urna buttons */
+:root{
+  --paper:#EDF1EE; --panel:#FFFFFF; --ink:#13202E; --muted:#5A6A6A; --line:#CFD8D4; --soft:#E3E9E6;
+  --urna:#2A2F33; --urna-ink:#E9EEEC; --screen:#D8E6D2; --screen-ink:#1C2A1E;
+  --confirm:#1E8A4A; --confirm-ink:#FFFFFF; --corrige:#D46E17; --branco:#F4F4EE; --branco-ink:#1A1A1A;
+  --ok:#1E8A4A; --bad:#C0392B; --warn:#B7791F; --focus:#2F6FDB;
+  --display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0E1417; --panel:#162027; --ink:#E5ECEA; --muted:#93A4A2; --line:#2A373D; --soft:#1C272D;
+  --urna:#080B0D; --urna-ink:#E5ECEA; --screen:#23352A; --screen-ink:#CFEBD4;
+  --confirm:#2FA862; --confirm-ink:#06140B; --corrige:#EE8A33; --branco:#D9DCD4; --branco-ink:#111;
+  --ok:#3CC474; --bad:#F06A5B; --warn:#E4A93C; --focus:#7AA7FF; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#0E1417; --panel:#162027; --ink:#E5ECEA; --muted:#93A4A2; --line:#2A373D; --soft:#1C272D;
+  --urna:#080B0D; --urna-ink:#E5ECEA; --screen:#23352A; --screen-ink:#CFEBD4;
+  --confirm:#2FA862; --confirm-ink:#06140B; --corrige:#EE8A33; --branco:#D9DCD4; --branco-ink:#111;
+  --ok:#3CC474; --bad:#F06A5B; --warn:#E4A93C; --focus:#7AA7FF; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* Urna header */
+.urna{background:var(--urna);color:var(--urna-ink);padding-block:22px 18px}
+.urna .wrap{padding-block:0;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+.brand small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.brand h1{font-size:clamp(28px,6vw,44px);font-weight:800;line-height:1.02;letter-spacing:-.01em}
+.brand p{margin:6px 0 0;opacity:.8;max-width:52ch;font-size:14px}
+.screen{background:var(--screen);color:var(--screen-ink);font-family:var(--mono);border-radius:6px;padding:12px 14px;min-width:230px;box-shadow:inset 0 0 0 3px rgba(0,0,0,.25)}
+.screen .lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.screen .count{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.screen .sub{font-size:11px;opacity:.8}
+@media (max-width:640px){.urna .wrap{grid-template-columns:1fr}.screen{min-width:0}}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 20px;overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--confirm)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.stack{display:grid;gap:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.field{display:grid;gap:4px;min-width:0;flex:1 1 220px}
+.field label,.qlabel{font-size:13px;font-weight:600}
+.hint{font-size:12px;color:var(--muted)}
+input[type=text],textarea,select{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-width:0}
+input:disabled,select:disabled,textarea:disabled{opacity:.6}
+textarea{resize:vertical}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* Keys (urna buttons) */
+.keys{display:flex;flex-wrap:wrap;gap:10px}
+.key{border:0;border-radius:5px;padding:12px 18px;font-family:var(--mono);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.key:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.k-confirma{background:var(--confirm);color:var(--confirm-ink)}
+.k-corrige{background:var(--corrige);color:#1B0E02}
+.k-branco{background:var(--branco);color:var(--branco-ink);border:1px solid var(--line)}
+
+/* State grid */
+.regions{display:grid;gap:12px}
+.region{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:start}
+.region h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:8px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{position:relative;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 10px 6px;font-family:var(--mono);font-weight:700;cursor:pointer;min-width:52px;text-align:left}
+.chip .pg{display:block;font-size:10px;font-weight:500;color:var(--muted)}
+.chip.has{border-color:var(--confirm)}
+.chip.has .pg{color:var(--confirm)}
+.chip.full{background:var(--confirm);color:var(--confirm-ink);border-color:var(--confirm)}
+.chip.full .pg{color:var(--confirm-ink)}
+.chip[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px}
+@media (max-width:560px){.region{grid-template-columns:1fr}.region h3{padding-top:0}}
+
+.qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+@media (max-width:680px){.qgrid{grid-template-columns:1fr}}
+.qgroup{grid-column:1/-1;margin-top:6px;padding-top:10px;border-top:1px dashed var(--line);font-family:var(--display);font-weight:600;font-size:17px}
+.qgroup:first-child{border-top:0;margin-top:0;padding-top:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;font-weight:500;background:var(--paper)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{font-weight:700}
+.seg label:has(input:checked){background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg label:has(input:focus-visible){outline:3px solid var(--focus)}
+.seg label:has(input:disabled){cursor:not-allowed;opacity:.6}
+
+.statehead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:12px}
+.statehead h2{font-size:26px}
+.stepn{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:4px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.7em;vertical-align:.15em;margin-right:6px}
+.statehead h2 > span:not(.stepn){font-family:var(--mono);font-size:14px;color:var(--muted);margin-left:8px}
+
+.ccard{display:flex;gap:12px;align-items:center;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
+.ph{position:relative;flex:none;width:56px;height:72px;border-radius:5px;overflow:hidden;background:var(--screen);color:var(--screen-ink);display:grid;place-items:center;font-family:var(--mono);font-weight:700}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}
+.ph.mini{width:26px;height:32px;font-size:10px;vertical-align:middle;margin-right:6px;display:inline-grid;border-radius:3px}
+.cinfo{min-width:0}
+.cnum{font-family:var(--mono);font-weight:700;font-size:22px;letter-spacing:.15em;line-height:1}
+.cname{font-weight:700;font-size:14px;margin-top:4px}
+.cpart{font-size:12px;color:var(--muted)}
+.sj{color:var(--warn);font-weight:600}
+.sealbox{display:grid;gap:10px}
+.code{font-family:var(--mono);font-size:12px;word-break:break-all;background:var(--soft);border:1px dashed var(--line);border-radius:6px;padding:10px;max-height:140px;overflow:auto}
+.toast{font-size:13px;font-weight:600;color:var(--ok)}
+.banner{border-left:4px solid var(--warn);background:var(--soft);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px}
+.banner.ok{border-left-color:var(--ok)}
+.banner.bad{border-left-color:var(--bad)}
+
+/* Reveal */
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel)}
+.pcard.lead{border:2px solid var(--confirm)}
+.pcard .nm{font-weight:700}
+.pcard .pts{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.pcard .meta{font-size:12px;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.q{color:var(--muted);font-size:13px;width:28%}
+td.p{font-weight:500}
+td.p.hit{color:var(--ok);font-weight:700}
+td.p.miss{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+td.res input,td.res select{padding:6px 8px;font-size:13px}
+.sthead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.sthead h3{font-size:20px}
+.sthead .mini{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.pill.on{background:var(--confirm);color:var(--confirm-ink)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.ptable td:last-child{text-align:right;font-family:var(--mono);font-weight:700}
+.ptable{min-width:0}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<header class="urna">
+  <div class="wrap">
+    <div class="brand">
+      <small>Eleições gerais · 1º turno · 04/10/2026</small>
+      <h1>Bolão da Urna 2026</h1>
+      <p>Palpites para governador, Senado e presidente em cada estado. Sele o seu, mande o código no WhatsApp e confira com a apuração.</p>
+    </div>
+    <div class="screen" aria-live="polite">
+      <div class="lbl" id="scrLbl">Palpites fecham em</div>
+      <div class="count" id="scrCount">--</div>
+      <div class="sub">domingo, 04/10 às 08:00 (Brasília)</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-palp" aria-selected="true" data-view="palp">Meus palpites</button>
+    <button class="tab" role="tab" id="t-rev" aria-selected="false" data-view="rev">Revelar e placar</button>
+    <button class="tab" role="tab" id="t-reg" aria-selected="false" data-view="reg">Regras</button>
+  </nav>
+
+  <!-- PALPITES -->
+  <section id="v-palp" class="stack">
+    <div id="lockBanner" class="banner" hidden></div>
+    <div class="card row">
+      <div class="field">
+        <label for="pname"><span class="stepn">1</span> Seu nome no bolão</label>
+        <input type="text" id="pname" maxlength="30" placeholder="Ex.: Alex">
+      </div>
+      <div class="hint" style="flex:2 1 300px">Seus palpites ficam salvos neste aparelho enquanto você preenche. Estado que você não preencher simplesmente não pontua.</div>
+    </div>
+
+    <div class="card">
+      <div class="statehead"><h2><span class="stepn">2</span> Presidente · Brasil</h2><span class="hint">Preencha uma vez só</span></div>
+      <div class="qgrid" id="nacGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="statehead"><h2><span class="stepn">3</span> Estados</h2><span class="hint" id="progTotal"></span></div>
+      <p class="hint" style="margin:0 0 12px">Toque num estado para abrir as perguntas dele logo abaixo. Preencha quantos quiser.</p>
+      <div class="regions" id="regions"></div>
+    </div>
+
+    <div class="card" id="statePanel" style="border-width:2px"></div>
+
+
+    <div class="card">
+      <div class="statehead"><h2><span class="stepn">4</span> Sua zebra</h2><span class="hint">Vale 4 pontos se acontecer</span></div>
+      <div class="field">
+        <label for="zebra">Um resultado surpreendente em que você aposta</label>
+        <textarea id="zebra" rows="2" maxlength="200" placeholder="Ex.: candidato X vai ao 2º turno no estado Y"></textarea>
+      </div>
+    </div>
+
+    <div class="card sealbox">
+      <div class="statehead"><h2><span class="stepn">5</span> Selar palpite</h2><span class="hint" id="sealSummary"></span></div>
+      <p class="hint" style="margin:0">Selar gera um código embaralhado com todos os seus palpites e o horário. Copie e mande no WhatsApp antes das 8h de domingo. Se mudar algo, sele de novo: vale o último código enviado antes do prazo.</p>
+      <div class="keys">
+        <button class="key k-confirma" id="btnSeal">Confirma · selar</button>
+        <button class="key k-branco" id="btnReview">Revisar meus palpites</button>
+        <button class="key k-corrige" id="btnClear">Corrige · limpar tudo</button>
+      </div>
+      <div id="reviewOut" class="stack" hidden></div>
+      <div id="clearConfirm" class="banner bad" hidden>
+        Apagar todos os seus palpites deste aparelho?
+        <div class="keys" style="margin-top:8px"><button class="key k-corrige" id="btnClearYes">Apagar</button><button class="key k-branco" id="btnClearNo">Cancelar</button></div>
+      </div>
+      <div id="sealOut" hidden class="stack" style="gap:8px">
+        <div class="eyebrow">Seu código</div>
+        <div class="code" id="sealCode"></div>
+        <div class="keys"><button class="key k-branco" id="btnCopy">Copiar código</button></div>
+        <div class="toast" id="copyMsg" aria-live="polite"></div>
+      </div>
+      <div class="toast" id="sealErr" aria-live="polite" style="color:var(--bad)"></div>
+    </div>
+  </section>
+
+  <!-- REVELAR -->
+  <section id="v-rev" class="stack" hidden>
+    <div id="revLock" class="banner"></div>
+    <div class="card stack" id="codesCard">
+      <div class="statehead"><h2>Códigos dos jogadores</h2><span class="hint">Cole um código por caixa</span></div>
+      <div id="codeInputs" class="stack" style="gap:10px"></div>
+      <div class="keys">
+        <button class="key k-confirma" id="btnReveal">Revelar palpites</button>
+        <button class="key k-branco" id="btnAddCode">+ jogador</button>
+      </div>
+      <div class="toast" id="revErr" aria-live="polite" style="color:var(--bad)"></div>
+    </div>
+    <div id="revOut" class="stack" hidden>
+      <div class="card stack">
+        <div class="statehead"><h2>Placar</h2><span class="hint" id="scoreNote"></span></div>
+        <div class="score" id="scoreCards"></div>
+      </div>
+      <div class="banner">Preencha a coluna <b>Resultado</b> conforme a apuração. Os pontos se atualizam na hora e ficam salvos neste aparelho. Resultado em branco significa ainda não apurado.</div>
+      <div id="revTables" class="stack"></div>
+    </div>
+  </section>
+
+  <!-- REGRAS -->
+  <section id="v-reg" class="stack" hidden>
+    <div class="rules">
+      <div class="card stack">
+        <h2>Como funciona</h2>
+        <ol class="steps">
+          <li>Cada um abre esta página, coloca o nome e preenche os estados que quiser.</li>
+          <li>Até <b>domingo, 04/10, às 08:00</b>, toque em <b>Confirma · selar</b> e mande o código no WhatsApp. O horário da mensagem é a prova.</li>
+          <li>Às 8h a página trava os palpites e libera a revelação.</li>
+          <li>À noite, cole os códigos em <b>Revelar e placar</b> e preencha os resultados. O placar sai sozinho.</li>
+          <li>Nos estados com 2º turno para governador (25/10), a pergunta do vencedor fica pendente até lá.</li>
+        </ol>
+      </div>
+      <div class="card stack">
+        <h2>Pontuação</h2>
+        <table class="ptable"><tbody id="ptable"></tbody></table>
+        <p class="hint" style="margin:0">Senado e os dois mais votados valem em qualquer ordem. Repetir o mesmo nome nas duas linhas só pontua uma vez.</p>
+      </div>
+    </div>
+    <div class="card"><p class="hint" style="margin:0">Candidatos, números e fotos oficiais do TSE (DivulgaCandContas, 30/09/2026). Candidaturas renunciadas ou indeferidas em definitivo ficaram de fora; "sub judice" indica candidatura ainda em julgamento. Se faltar alguém, use "Outro (digitar)".</p></div>
+  </section>
+</main>
+
+<datalist id="dl-pres"></datalist>
+<div id="dls"></div>
+
+<script>
+(function(){
+"use strict";
+const LOCK = Date.UTC(2026, 9, 4, 11, 0, 0); // 04/10/2026 08:00 BRT
+const PTS = {gv:3, seg:2, nome:1, sen:2, sm:1, pv:2, faixa:1, ab:1, zebra:4};
+// Resultados oficiais pré-carregados (preenchidos depois da apuração, se pedido)
+const OFFICIAL = {nac:{}, uf:{}};
+
+const PRES = "280002552484|CLARIANA BARAO|27|DC|;280002551975|EDMILSON COSTA|21|PCB|;280002551547|ESCRITOR AUGUSTO CURY|70|AVANTE|;280002551544|FLAVIO BOLSONARO|22|PL|;280002541457|HERTZ DIAS|16|PSTU|;280002554479|LEONARDO AVALANCHE|28|PRTB|1;280002542548|LULA|13|PT|;280002540694|RENAN SANTOS|14|MISSÃO|;280002551932|RONALDO CAIADO|55|PSD|;280002552487|RUI COSTA PIMENTA|29|PCO|;280002538811|SAMARA|80|UP|;280002548139|VETERINÁRIO WILSON GRASSI|35|DEMOCRATA|;280002539826|ZEMA|30|NOVO|";
+const UF = {
+AC:["Acre","Norte","10002532492|ALAN RICK|10|REPUBLICANOS|;10002533539|DR.LUISINHO|36|AGIR|;10002549500|EUDO RAFFAEL|21|PCB|;10002544107|MAILZA ASSIS|11|PP|;10002550719|THOR DANTAS|40|PSB|;10002544015|TIÃO BOCALOM|45|PSDB|","10002536710|DR. JUNIOR FEITOSA|277|DC|;10002544274|EDUARDO VELLOSO|777|SOLIDARIEDADE|;10002548046|GLADSON CAMELÍ|111|PP|1;10002536441|JORGE VIANA|131|PT|;10002533895|MARA ROCHA|100|REPUBLICANOS|;10002548050|MARCIO BITTAR|222|PL|;10002535804|PETECÃO|555|PSD|;10002544110|PROFESSOR INACIO MOREIRA|500|PSOL|"],
+AL:["Alagoas","Nordeste","20002553350|JHC|45|PSDB|;20002539642|LENILDA LUNA|80|UP|;20002552502|MÁRCIO JAMBO|35|DEMOCRATA|;20002553745|RENAN FILHO|15|MDB|","20002540197|ALEXANDRE FLEMING|800|UP|;20002553272|ARTHUR LIRA|111|PP|;20002548147|DAVI DAVINO FILHO|100|REPUBLICANOS|;20002553726|DR. WANDERLEY|156|MDB|;20002552524|MARIEDSON|355|DEMOCRATA|;20002553711|MARINA JHC|456|PSDB|;20002553727|RENAN|151|MDB|"],
+AM:["Amazonas","Norte","40002551740|CABO DACIOLO|33|MOBILIZA|;40002536086|DAVID ALMEIDA|70|AVANTE|;40002535267|GILBERTO VASCONCELOS|16|PSTU|;40002550776|ISAEL MUNDURUKU|18|REDE|;40002532272|OMAR AZIZ|55|PSD|;40002541626|PROFESSORA MARIA DO CARMO|22|PL|;40002541741|ROBERTO CIDADE|44|UNIÃO|","40002542686|CAPITÃO ALBERTO NETO|222|PL|;40002535391|DAILSON CORRÊA|277|DC|;40002531447|EDUARDO BRAGA|155|MDB|;40002535270|EVANDRO DE OLIVEIRA|161|PSTU|;40002551283|ISMAEL MUNDURUKU|181|REDE|;40002537344|PLINIO VALÉRIO|455|PSDB|;40002551281|PROFESSORA EVANY|500|PSOL|;40002541744|WILSON LIMA|444|UNIÃO|;40002550806|XUXA DO AMAZONAS|333|MOBILIZA|"],
+AP:["Amapá","Norte","30002536313|CARLOS CLEY|16|PSTU|;30002536311|CLÉCIO|44|UNIÃO|;30002552017|DELEGADO MARCOS|27|DC|;30002530014|DR. FURLAN|55|PSD|;30002551388|JAIRO PALHETA|29|PCO|","30002549911|ACÁCIO FAVACHO|151|MDB|;30002551576|ALLINY SERRÃO|444|UNIÃO|;30002550229|CAPI|401|PSB|;30002553708|HELIO SILVA|290|PCO|;30002551382|JUÍZA JÔ|277|DC|;30002530069|LUCAS BARRETO|555|PSD|;30002551381|PROFESSOR UZIAN PINTO|272|DC|;30002549909|RANDOLFE|130|PT|;30002530071|RAYSSA FURLAN|200|PODE|"],
+BA:["Bahia","Nordeste","50002533190|ACM NETO|44|UNIÃO|;50002535253|ARIEL CAPISTRANO|27|DC|;50002544692|AROLDO FELIX|80|UP|;50002536314|JERÔNIMO RODRIGUES|13|PT|;50002552489|MARIA BONA|29|PCO|;50002532269|RONALDO MANSUR|50|PSOL|","50002533124|ANGELO CORONEL|100|REPUBLICANOS|;50002536625|CARLOS SODRÉ|333|MOBILIZA|;50002550314|GREGORIO GOULD|800|UP|;50002536317|JAQUES WAGNER|130|PT|;50002533123|JOÃO ROMA|222|PL|;50002534774|MARCELO CARVALHO|180|REDE|;50002553643|MARCELO MILLET|290|PCO|;50002536577|MARCELO SANTTANA|277|DC|;50002534769|PROFESSORA DELLIANA|500|PSOL|;50002536321|RUI COSTA|133|PT|"],
+CE:["Ceará","Nordeste","60002531351|CIRO GOMES|45|PSDB|;60002552498|DANILO SOARES|35|DEMOCRATA|;60002540417|DELEGADO HUGGO|14|MISSÃO|;60002543969|ELMANO DE FREITAS|13|PT|;60002552320|IERI BRAGA|29|PCO|;60002533729|SERLEY LEAL|80|UP|;60002553922|VERA LÚCIA|30|NOVO|;60002549967|ZÉ BATISTA|16|PSTU|","60002540754|ALCIDES FERNANDES|222|PL|;60002540753|CAPITÃO WAGNER|445|UNIÃO|;60002533959|CATARINA MATOS|800|UP|;60002542479|CID GOMES|400|PSB|;60002539687|GUILHERME THEOPHILO|300|NOVO|;60002551397|LINO ALVES|290|PCO|1;60002542476|LUIZIANNE|180|REDE|;60002550748|REGINALDO|162|PSTU|"],
+DF:["Distrito Federal","Centro-Oeste","70002551557|CAPPELLI|40|PSB|;70002553055|CELINA LEÃO|11|PP|;70002551298|ELISSON|36|AGIR|1;70002552341|EXPEDITO MENDONÇA|29|PCO|;70002547775|KIKO CAPUTO|30|NOVO|;70002552496|LEANDRO GRASS|13|PT|;70002552965|PAULA BELMONTE|45|PSDB|;70002535930|PROFESSOR ROBSON|16|PSTU|;70002537111|PROFESSORA SAMARA MINEIRO|80|UP|;70002553982|RICO PINHEIRO|28|PRTB|1","70002552934|BIA KICIS|223|PL|;70002551426|DAVID HORN|290|PCO|;70002552490|ERIKA KOKAY|131|PT|;70002553296|GUTO FELÍCIO DOS SANTOS|456|PSDB|;70002552492|LEILA DO VÔLEI|123|PDT|;70002552582|MARLEY|700|AVANTE|;70002552936|MICHELLE BOLSONARO|222|PL|;70002537112|PROFESSOR GUILHERME AMORIM|800|UP|;70002553751|RONALDO FONSECA|555|PSD|;70002548624|SEBASTIÃO COELHO|300|NOVO|;70002551323|TIAGO|360|AGIR|1;70002536445|ZANATA|161|PSTU|"],
+ES:["Espírito Santo","Sudeste","80002541012|BRENO BARCELOS|14|MISSÃO|;80002551833|HELDER SALOMÃO|13|PT|;80002552682|LORENZO PAZOLINI|10|REPUBLICANOS|;80002550832|RAFAEL DEMUNER|80|UP|;80002552172|RICARDO FERRAÇO|15|MDB|","80002542401|CALLEGARI|277|DC|;80002553265|EVAIR DE MELO|100|REPUBLICANOS|;80002550187|FABIANO CONTARATO|133|PT|;80002530022|LEONARDO MONJARDIM|300|NOVO|;80002553269|MAGUINHA MALTA|222|PL|;80002538202|MARCOS DO VAL|700|AVANTE|;80002549404|PROFESSOR FABIAN|500|PSOL|;80002551370|RENATO CASAGRANDE|400|PSB|;80002552373|RODNEY MIRANDA|280|PRTB|;80002551368|ROSE DE FREITAS|156|MDB|;80002552692|SERGIO MENEGUELLI|556|PSD|"],
+GO:["Goiás","Centro-Oeste","90002540993|DANIEL VILELA|15|MDB|;90002553733|DANILO DA SILVA|29|PCO|;90002550707|LUCIANA AMORIM|80|UP|;90002545476|LUIS CESAR BUENO|13|PT|;90002543463|MARCONI PERILLO|45|PSDB|;90002551791|WILDER MORAIS|22|PL|","90002541454|CINTIA DIAS|500|PSOL|;90002546974|DR. ZACHARIAS CALIL|155|MDB|;90002545243|ERNESTO ROLLER|456|PSDB|;90002540997|GRACINHA CAIADO|444|UNIÃO|;90002551198|GUILHERME DARQUES|800|UP|;90002543556|GUSTAVO GAYER|222|PL|;90002540998|GUSTAVO MENDANHA|251|PRD|;90002541455|ISAURA LEMOS|400|PSB|;90002545244|IURE CASTRO|234|CIDADANIA|;90002543560|OSÉIAS VARÃO|227|PL|;90002543215|VANDERLAN CARDOSO|555|PSD|"],
+MA:["Maranhão","Nordeste","100002544076|ANDRÉ LUIS|14|MISSÃO|;100002552700|DIMAS CASSIMIRO|29|PCO|;100002545679|EDUARDO BRAIDE|55|PSD|;100002542556|FELIPE CAMARÃO|13|PT|;100002543869|ORLEANS BRANDÃO|15|MDB|;100002544073|REGINALDO LIMA|21|PCB|;100002551399|ROBERTO ROCHA|28|PRTB|1;100002534190|SAULO ARCANGELI|16|PSTU|","100002537364|CIDÔNIO GONÇALVES|222|PL|;100002550418|DR.HILTON GONÇALO|333|MOBILIZA|;100002541459|ELIZIANE GAMA|133|PT|;100002548853|ENILTON RODRIGUES|500|PSOL|;100002542867|FUFUCA|111|PP|;100002548011|LAHESIO BONFIM|300|NOVO|;100002549014|RAIMUNDO MOREIRA|212|PCB|;100002549583|ROSEANA SARNEY|151|MDB|;100002553336|SIMPLÍCIO ARAÚJO|277|DC|;100002537338|WEVERTON ROCHA|123|PDT|;100002536212|WILSON LEITE|160|PSTU|"],
+MG:["Minas Gerais","Sudeste","130002539775|ALEXANDRE KALIL|12|PDT|;130002544411|BEN MENDES|14|MISSÃO|;130002552296|CLEITINHO AZEVEDO|10|REPUBLICANOS|;130002550834|FLÁVIO ROSCOE|22|PL|;130002549557|GABRIEL|15|MDB|;130002552308|HENRIQUE ÁREAS|29|PCO|1;130002547874|INDIRA XAVIER|80|UP|;130002541911|MATEUS SIMÕES|55|PSD|;130002550464|PATRUS ANANIAS|13|PT|;130002544122|PROFESSOR TÚLIO LOPES|21|PCB|;130002546802|RAFAEL DUDA|16|PSTU|","130002547884|ANA LUIZA DO MLB|808|UP|;130002552302|ARCANJO PIMENTA|155|MDB|;130002554332|AÉCIO NEVES|456|PSDB|;130002552186|CARLIN MOURA|700|AVANTE|;130002545590|CARLOS VIANA|555|PSD|;130002551786|DOMINGOS SÁVIO|222|PL|;130002547882|FIDÉLIS ALCÂNTARA|800|UP|;130002551929|JORDANO METALÚRGICO|160|PSTU|;130002551265|JUÍZ RAMON MOREIRA|277|DC|;130002552299|MANOEL CARVALHO|150|MDB|;130002548381|MARCELO ARO|111|PP|;130002551284|MARCO ANTÔNIO SUPERMAN|300|NOVO|;130002550560|MARÍLIA CAMPOS|131|PT|;130002552311|TIÃO PESSOA|290|PCO|1;130002551930|VICTÓRIA MELLO VIC|161|PSTU|;130002550557|ÁUREA CAROLINA|500|PSOL|"],
+MS:["Mato Grosso do Sul","Centro-Oeste","120002552201|DANIEL LEMES|29|PCO|;120002552155|DELCIDIO AMARAL|25|PRD|;120002549681|ECONOMISTA RENATO GOMES|27|DC|;120002536582|EDUARDO RIEDEL|11|PP|;120002539834|FÁBIO TRAD|13|PT|;120002550198|JEFERSON BEZERRA|36|AGIR|;120002552191|JOÃO HENRIQUE CATAN|30|NOVO|;120002532257|LUCIEN REZENDE|50|PSOL|","120002532721|BETO DO MOVIMENTO|500|PSOL|;120002535769|CAPITÃO CONTAR|221|PL|;120002534952|DANIEL JUNIOR|365|AGIR|1;120002551909|LUIZ LEMES|277|DC|;120002535764|REINALDO AZAMBUJA|222|PL|;120002552115|ROBERTO OSHIRO|300|NOVO|;120002547434|SORAYA|400|PSB|;120002552196|VALDERI GARCIA|290|PCO|;120002552183|VALTER DA COMAGRAN|258|PRD|;120002547435|VANDER LOUBET|133|PT|"],
+MT:["Mato Grosso","Centro-Oeste","110002544985|DOUTORA NATASHA|55|PSD|;110002553058|MAURICIO COELHO|33|MOBILIZA|;110002551480|OTAVIANO PIVETTA|10|REPUBLICANOS|;110002543953|RAFAELL MILAS|14|MISSÃO|;110002554073|SARGENTO LAUDICÉRIO|36|AGIR|;110002551737|WELLINGTON FAGUNDES|22|PL|","110002553706|BENY GODOY|365|AGIR|;110002548042|CORONEL DARWIN|351|DEMOCRATA|;110002544986|FÁVARO|555|PSD|;110002540403|GALVAN|700|AVANTE|;110002552698|JANAINA RIVA|150|MDB|;110002551967|MARGARETH BUZETTI|111|PP|;110002551966|MAURO MENDES|444|UNIÃO|;110002544988|PEDRO TAQUES|400|PSB|;110002553701|PROFESSOR NELSON FERREIRA|360|AGIR|;110002552693|ZÉ MEDEIROS|222|PL|"],
+PA:["Pará","Norte","140002542386|ARACELI|50|PSOL|;140002549930|DR. DANIEL|20|PODE|;140002551943|GAL LEITE|80|UP|;140002551598|HANA GHASSAN|15|MDB|;140002554434|RUTH REIS|35|DEMOCRATA|1;140002554108|WELL MACEDO|16|PSTU|","140002553852|BRENO GUIMARÃES|333|MOBILIZA|1;140002538404|CELSO SABINO|123|PDT|;140002550780|CHICÃO|444|UNIÃO|;140002545674|CONTI|500|PSOL|;140002554209|CORONEL JONILDO|277|DC|;140002544855|DELEGADO ÉDER MAURO|222|PL|;140002548150|EDLAINE RODRIGUES|355|DEMOCRATA|1;140002548387|FERNANDA LOPES|800|UP|;140002545671|GIZELLE FREITAS|505|PSOL|;140002550779|HELDER|151|MDB|;140002553952|LIVIA NORONHA|777|SOLIDARIEDADE|1;140002542691|ZEQUINHA MARINHO|200|PODE|"],
+PB:["Paraíba","Nordeste","150002552603|CAMILO DUARTE|29|PCO|;150002544133|CÍCERO LUCENA|15|MDB|;150002538692|EFRAIM FILHO|22|PL|;150002551789|LUCAS RIBEIRO|11|PP|;150002551911|PEDRO COUTINHO|27|DC|;150002540204|YURI EZEQUIEL|80|UP|","150002552607|ADRIANO TRAJANO|290|PCO|;150002544909|ANDRÉ GADELHA|151|MDB|;150002538459|DR. MARCELO QUEIROGA|222|PL|;150002549793|JOAO AZEVÊDO|400|PSB|;150002544140|JOÃO BATISTA|801|UP|;150002548968|MAJOR FÁBIO|300|NOVO|;150002549791|NABOR|100|REPUBLICANOS|;150002548971|RINALDO JÚNIOR|272|DC|;150002544135|ROSILENE SANTANA|800|UP|;150002544905|VENEZIANO|155|MDB|"],
+PE:["Pernambuco","Nordeste","170002536575|GUILHERME FONSECA|16|PSTU|;170002538097|IVAN MORAES|50|PSOL|;170002537230|JOÃO CAMPOS|40|PSB|;170002537320|PROFESSORA CAMILA|80|UP|;170002537227|RAQUEL LYRA|55|PSD|;170002540337|RENAN|14|MISSÃO|;170002552776|VICTOR ASSIS|29|PCO|","170002530097|CARLOS SANT'ANNA|300|NOVO|;170002552102|EDUARDO DA FONTE|111|PP|;170002537335|GORETT BITU|801|UP|;170002547773|HUMBERTO COSTA|130|PT|;170002552943|MAILSON DA SILVA NETO|290|PCO|;170002537418|MARIANO MACEDO|161|PSTU|;170002547771|MARÍLIA ARRAES|123|PDT|;170002539456|MENDONÇA FILHO|222|PL|;170002540420|PASTOR GILVAN COSTA|355|DEMOCRATA|1;170002549655|PAULO RUBEM SANTIAGO|180|REDE|;170002537334|SAMUEL TIMOTEO|800|UP|;170002552097|TÚLIO GADÊLHA|555|PSD|"],
+PI:["Piauí","Nordeste","180002544216|DRA. LÚCIA SANTOS|45|PSDB|;180002549920|ELIZEU AGUIAR|30|NOVO|;180002537422|GERALDO CARVALHO|16|PSTU|1;180002538530|JOEL RODRIGUES|11|PP|;180002553722|LOURDES MELO|29|PCO|1;180002549970|PROFESSOR GISVALDO|50|PSOL|;180002548565|PROFESSOR JURITY|27|DC|1;180002532987|RAFAEL FONTELES|13|PT|;180002548388|RAVENNA DA INCLUSÃO|35|DEMOCRATA|1;180002549995|SANTIAGO BELIZÁRIO|80|UP|","180002549933|ANTÔNIO BARROS|300|NOVO|;180002549936|ANTÔNIO JOSÉ LIRA|700|AVANTE|;180002540446|CIRO NOGUEIRA|111|PP|;180002553753|CLOVES JOSÉ|291|PCO|1;180002537340|DANNIEL ROCHA|166|PSTU|1;180002547863|DIONISIO CARVALHO|277|DC|1;180002550979|FRANCINALDO LEÃO|500|PSOL|;180002547860|IRMÃO EVANDRO MARQUES|278|DC|1;180002548155|JARDENYA BEZERRA|355|DEMOCRATA|1;180002548568|JORGE LOPES|456|PSDB|;180002533964|JÚLIO CÉSAR O JULIM DO LULA|555|PSD|;180002544457|MAJOR PAULO ROBERTO|333|MOBILIZA|1;180002533967|MARCELO CASTRO|151|MDB|;180002550977|MARIA MADALENA NUNES|505|PSOL|;180002548157|MISSIONÁRIO EVANDRO CRAVEIRO|350|DEMOCRATA|1;180002541938|PEDRO LAURENTINO|800|UP|;180002540449|TIAGO JUNQUEIRA|222|PL|;180002544459|TOINHO DUFRANGO|338|MOBILIZA|1"],
+PR:["Paraná","Sul","160002552560|ADRIANO FUNILEIRO|29|PCO|1;160002547594|DOUTOR ALEXANDRE SALOMÃO|33|MOBILIZA|;160002551353|LUIZ FRANÇA|14|MISSÃO|;160002547666|REQUIÃO FILHO|12|PDT|;160002548010|SAMUEL DE MATTOS|16|PSTU|;160002549553|SANDRO ALEX|55|PSD|;160002540833|SERGIO MORO|22|PL|;160002550997|TAYNÁ MIESSA|80|UP|","160002547963|ALEXANDRE CURI|100|REPUBLICANOS|;160002549555|CRISTINA GRAEML|555|PSD|;160002547661|DELTAN DALLAGNOL|300|NOVO|;160002547658|DR ROSINHA|132|PT|;160002547660|FILIPE BARROS|222|PL|;160002547656|GLEISI|131|PT|;160002551043|JOAQUIM DO MLB|800|UP|;160002551121|KAREN GUERREIRO|144|MISSÃO|;160002552563|MARCELO MARCELINO|290|PCO|1"],
+RJ:["Rio de Janeiro","Sudeste","190002537524|ANDRÉ MARINHO|30|NOVO|;190002544120|CORONEL BUSNELLO|14|MISSÃO|;190002540198|CYRO GARCIA|16|PSTU|;190002542887|DOUGLAS RUAS|22|PL|;190002543380|EDUARDO PAES|55|PSD|;190002550196|GAROTINHO|10|REPUBLICANOS|1;190002547272|JULIETE|80|UP|;190002552513|LUAN MONTEIRO|29|PCO|;190002536162|WILLIAM SIRI|50|PSOL|","190002548141|BENEDITA DA SILVA|131|PT|;190002542888|CARLOS JORDY|221|PL|;190002535142|CARLOS PORTINHO|222|PL|;190002543961|HELIO SECCO|144|MISSÃO|;190002552083|LUCIANO MATTOS|280|PRTB|;190002552521|LUIZ EUGENIO|290|PCO|1;190002550184|MARCELO CRIVELLA|100|REPUBLICANOS|;190002545553|MARCOS DIAS|200|PODE|;190002548589|MICHELLY XAVIER|800|UP|;190002536164|MONICA BENICIO|500|PSOL|;190002539827|PAULA FALCÃO|160|PSTU|;190002548145|PEDRO PAULO|555|PSD|;190002548590|VINICIUS BENEVIDES|808|UP|;190002550182|WAGUINHO|101|REPUBLICANOS|1;190002550190|Ó CLEMENTE|355|DEMOCRATA|"],
+RN:["Rio Grande do Norte","Nordeste","200002535255|ALLYSON|44|UNIÃO|;200002547826|ARINALDA DO MLB|80|UP|;200002534001|CADU DE LULA|13|PT|;200002542481|DÁRIO BARBOSA|16|PSTU|;200002554482|GODEIRO LINHARESS|27|DC|;200002553301|HENRIQUE LYRA|29|PCO|1;200002546757|PROFESSOR ROBERIO PAULINO|50|PSOL|;200002546756|RODRIGO DE BOLSONARO|36|AGIR|;200002534442|ÁLVARO DIAS|22|PL|","200002548115|CLÓVIS COSTA DO COLETIVO NÓS|369|AGIR|;200002534447|CORONEL HÉLIO|222|PL|;200002549133|GARI WENDELL BATISTA|360|AGIR|;200002542484|LUCIANA MANDU|161|PSTU|;200002550541|PROFESSOR GUILHERME|800|UP|;200002533843|RAFAEL MOTTA|123|PDT|;200002542483|ROSÁLIA FERNANDES|166|PSTU|;200002533841|SAMANDA DE LULA|131|PT|;200002546792|SANDRO PIMENTEL|500|PSOL|;200002546795|SONIA GODEIRO|501|PSOL|;200002534448|STYVENSON VALENTIM|200|PODE|;200002535511|TÉRCIO TINÔCO|444|UNIÃO|;200002535507|ZENAIDE MAIA|555|PSD|"],
+RO:["Rondônia","Norte","220002536806|ADAILTON FURIA|55|PSD|;220002542185|EXPEDITO NETTO|13|PT|;220002542916|HILDON CHAVES|44|UNIÃO|;220002541939|MARCOS ROGÉRIO|22|PL|;220002551251|PEDRO ABIB|15|MDB|;220002550927|SAMUEL COSTA|40|PSB|","220002541490|ACIR GURGACZ|123|PDT|;220002551946|AIRES MOTA|432|PV|;220002539995|BRUNO SCHEID|222|PL|;220002539996|DR. FERNANDO MÁXIMO|221|PL|;220002541944|ENGENHEIRO THULIO|144|MISSÃO|;220002551948|LUCIANA OLIVEIRA|133|PT|;220002539771|LUIS FERNANDO|555|PSD|;220002547310|MARIANA CARVALHO|100|REPUBLICANOS|;220002550928|NEIDINHA|400|PSB|1;220002547309|SÍLVIA CRISTINA|111|PP|"],
+RR:["Roraima","Norte","230002549223|ARTHUR HENRIQUE|22|PL|;230002553857|CLÉBIO GENUÍNO|29|PCO|1;230002549294|FARAH MESQUITA|77|SOLIDARIEDADE|;230002552060|ROSI AIRES|50|PSOL|;230002551571|SOLDADO SAMPAIO|10|REPUBLICANOS|","230002549361|BARTÔ MACUXI|500|PSOL|;230002550794|CHICO RODRIGUES|400|PSB|;230002549845|HELENA DA ASATUR|555|PSD|;230002534806|HELIO FERNANDO BARBOSA LOPES|222|PL|;230002550787|HILTON XAVIER|700|AVANTE|;230002552727|HIPERION DE OLIVEIRA|433|PV|1;230002549360|MARIO ROCHA|505|PSOL|;230002553636|MÁRCIO JUNQUEIRA|456|PSDB|1;230002534804|NICOLETTI|227|PL|;230002553010|PASTOR ISAMAR|444|UNIÃO|;230002549330|REGINA TIO IVO|300|NOVO|;230002533586|ROGÉRIO MIRANDA|277|DC|;230002553006|TERESA SURITA|155|MDB|"],
+RS:["Rio Grande do Sul","Sul","210002552592|CESAR PONTES|29|PCO|1;210002542892|GABRIEL SOUZA|15|MDB|;210002551508|JULIANA BRIZOLA|12|PDT|;210002535802|MARCELO MARANATA|45|PSDB|;210002533355|PRISCILA VOIGT|80|UP|;210002541367|REJANE DE OLIVEIRA|16|PSTU|;210002547857|ZUCCO|22|PL|","210002544698|DANIELA MULHERES SOCIALISTAS|160|PSTU|;210002543865|FREDERICO ANTUNES|555|PSD|;210002533435|LUCIANO DO MLB|800|UP|;210002533581|MANUELA D'ÁVILA|500|PSOL|;210002547819|MARCEL VAN HATTEM|300|NOVO|;210002538467|MILTON CARDOSO|455|PSDB|;210002533584|PIMENTA|131|PT|;210002544699|REGIS ETHUR|161|PSTU|;210002538465|RENATO JAGUARÃO|234|CIDADANIA|;210002552599|RIC JONES|290|PCO|1;210002543863|RIGOTTO|151|MDB|;210002547816|SANDERSON|222|PL|;210002533434|TANIA PERES|808|UP|"],
+SC:["Santa Catarina","Sul","240002553718|BRUNO PEDREIRO DO PCO|29|PCO|;240002548628|GELSON MERÍSIO|40|PSB|;240002537073|JORGINHO MELLO|22|PL|;240002551001|JOÃO RODRIGUES|55|PSD|;240002550544|LAÍS CHAUD|80|UP|;240002544118|MARCELO BRIGADEIRO|14|MISSÃO|;240002541913|PROFESSOR MARCUS SODRÉ|16|PSTU|;240002552157|RALF ZIMMER|25|PRD|","240002535770|AFRÂNIO BOPPRÉ|500|PSOL|;240002539636|ANA LUCIA DA SILVEIRA MACHADO|800|UP|;240002541935|CARLOS BOLSONARO|222|PL|;240002553005|CAROL|290|PCO|;240002541931|CAROL DE TONI|221|PL|;240002533898|DÉCIO LIMA|133|PT|;240002548632|ESPERIDIÃO AMIN|111|PP|;240002551377|JEFERSON ROCHA|250|PRD|;240002537632|JOANINHA DE OLIVEIRA|160|PSTU|;240002548630|LUNELLI|155|MDB|;240002537630|MARCOS DORVAL|161|PSTU|;240002550218|MARLENE SOCCAS|808|UP|;240002544094|TÚLIO DE AMORIM PFUETZENREITER|144|MISSÃO|"],
+SE:["Sergipe","Nordeste","260002547415|DR. HELTON|50|PSOL|1;260002551712|EMANUEL CACHO|45|PSDB|;260002542491|FÁBIO|55|PSD|;260002549466|RICARDO MARQUES|22|PL|;260002550683|TATY CRISTINA DE JESUS|27|DC|;260002532010|VALMIR DE FRANCISQUINHO|10|REPUBLICANOS|","260002547290|ANDRÉ MOURA|444|UNIÃO|;260002551366|CORONEL ROCHA|221|PL|;260002533084|DELEGADO ALESSANDRO|155|MDB|;260002549130|DELEGADO ANDRÉ DAVID|101|REPUBLICANOS|;260002549127|EDUARDO AMORIM|100|REPUBLICANOS|;260002551550|EDVALDO|123|PDT|;260002545677|IRAN BARBOSA|500|PSOL|1;260002543591|RENATINHA|277|DC|;260002551362|RODRIGO VALADARES|222|PL|;260002547285|ROGERIO CARVALHO|131|PT|"],
+SP:["São Paulo","Sudeste","250002550913|CARLOS MACHADO|21|PCB|;250002549705|FERNANDO HADDAD|13|PT|;250002553062|IZADORA DIAS|29|PCO|1;250002541303|TARCÍSIO|10|REPUBLICANOS|;250002536915|VERA LÚCIA|16|PSTU|;250002544912|VIVIAN MENDES|80|UP|","250002541308|ANDRÉ DO PRADO|222|PL|;250002541362|DRA ELIANA FERREIRA|161|PSTU|;250002552955|EDNELSON CESARETTI|290|PCO|1;250002544673|GERALDO RUFINO|200|PODE|;250002541312|GUILHERME DERRITE|111|PP|;250002554075|GUTO SCHIAVETTO|144|MISSÃO|;250002544514|MARCIO ALVES|800|UP|;250002551501|MARINA SILVA|180|REDE|;250002544516|MAÍRA DE SOUZA|808|UP|;250002552153|PETTER MAAHS|211|PCB|;250002532794|SALLES|300|NOVO|;250002551502|SIMONE TEBET|400|PSB|;250002552369|SONINHA FRANCINE|232|CIDADANIA|;250002541365|WELLER GONÇALVES|160|PSTU|;250002553252|WILLIAM TEIXEIRA|360|AGIR|"],
+TO:["Tocantins","Norte","270002548412|ATAIDES DE OLIVEIRA|30|NOVO|;270002550458|DU PEREIRA|27|DC|;270002544494|LAUREZ MOREIRA|55|PSD|;270002539187|PROF WITER NAVES|50|PSOL|;270002544599|PROFESSORA DORINHA|44|UNIÃO|;270002554375|SIQUEIRA CAMPOS JR|35|DEMOCRATA|;270002544544|VICENTINHO JÚNIOR|45|PSDB|","270002548344|ALEXANDRE GUIMARÃES|153|MDB|;270002552968|APÓSTOLO FLAVIO BRAGA|277|DC|;270002550610|CORONEL NILTON SANTOS|303|NOVO|;270002546333|EDUARDO GOMES|222|PL|;270002548409|ELI BORGES|100|REPUBLICANOS|;270002539141|FÁBIO RIBEIRO|180|REDE|;270002548231|GAGUIM|444|UNIÃO|;270002551270|HELIO RODRIGUES BOLSONARO|351|DEMOCRATA|1;270002551273|OSVANY LUZ|355|DEMOCRATA|;270002544629|PAULO MOURÃO|133|PT|;270002539142|PROFESSOR OSVALDO|500|PSOL|;270002546038|RONALDO DIMAS|202|PODE|;270002546039|VANDERLEI LUXEMBURGO|200|PODE|"]
+};
+const REGIONS = ["Norte","Nordeste","Centro-Oeste","Sudeste","Sul"];
+const FAIXA = ["Até 40%","40–50%","50–60%","Acima de 60%"];
+const ABST = ["Abaixo de 20%","20–25%","Acima de 25%"];
+const SN = ["Sim","Não"];
+
+// Question definitions
+const QS = [
+ {g:"Governador"},
+ {k:"gv", t:"Quem vence a eleição (contando o 2º turno, se houver)", type:"gov", pts:"gv"},
+ {k:"g2", t:"Vai ter 2º turno?", type:"sn", pts:"seg"},
+ {k:"ga", t:"Um dos dois mais votados no 1º turno", type:"gov", pts:"nome", pair:"gb"},
+ {k:"gb", t:"O outro dos dois mais votados", type:"gov", pts:"nome", pair:"ga"},
+ {k:"gf", t:"Faixa de votos do 1º colocado no 1º turno", type:"faixa", pts:"faixa", full:true},
+ {g:"Senado · duas vagas"},
+ {k:"s1", t:"Eleito (vaga 1)", type:"sen", pts:"sen", pair:"s2"},
+ {k:"s2", t:"Eleito (vaga 2)", type:"sen", pts:"sen", pair:"s1"},
+ {k:"sm", t:"O mais votado", type:"sen", pts:"sm"},
+ {g:"Presidente no estado"},
+ {k:"pv", t:"Quem vence no estado (1º turno)", type:"pres", pts:"pv"},
+ {k:"pf", t:"Faixa de votos do vencedor no estado", type:"faixa", pts:"faixa"}
+];
+const SQ = QS.filter(q=>q.k);
+const NQ = [
+ {k:"na", t:"Um dos dois mais votados no 1º turno", type:"pres", pts:"nome", pair:"nb"},
+ {k:"nb", t:"O outro dos dois mais votados", type:"pres", pts:"nome", pair:"na"},
+ {k:"n2", t:"Vai ter 2º turno?", type:"sn", pts:"seg"},
+ {k:"nf", t:"Faixa de votos do 1º colocado no Brasil", type:"faixa", pts:"faixa", full:true},
+ {k:"ab", t:"Abstenção nacional", type:"abst", pts:"ab"}
+];
+
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const parse = (str,u)=>str.split(";").filter(Boolean).map(x=>{const [id,n,num,p,sj]=x.split("|");return {id,n,num,p,sj:!!sj,u};});
+const FOTO = c=>`https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/${c.id}/${c.u}`;
+const ini = n=>String(n).replace(/^(DR\.?|DRA\.?|PROF\.?|PROFESSORA?|DELEGADO|CORONEL|CAPITÃO|SARGENTO|PASTOR|JUÍZA?)\s+/,"").split(/\s+/).slice(0,2).map(w=>w[0]).join("");
+function findCand(type,u,name){const l=candsFor(type,u);return l&&name?l.find(c=>norm(c.n)===norm(name)):null;}
+function photoHTML(c,cls){return `<span class="ph ${cls||""}"><span class="ini">${esc(ini(c.n))}</span><img src="${FOTO(c)}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`;}
+function cardHTML(c){return `<div class="ccard">${photoHTML(c)}<div class="cinfo"><div class="cnum">${esc(c.num)}</div><div class="cname">${esc(c.n)}</div><div class="cpart">${esc(c.p)}${c.sj?' · <span class="sj">sub judice</span>':""}</div></div></div>`;}
+document.addEventListener("error",e=>{const t=e.target;if(t&&t.tagName==="IMG"&&t.parentNode&&t.parentNode.classList.contains("ph"))t.remove();},true);
+const locked = ()=>Date.now()>=LOCK;
+
+// storage (per-viewer convenience)
+const store = {
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+let draft = store.get("bolao26-draft",{name:"",uf:{},nac:{},z:""});
+draft.uf=draft.uf||{};draft.nac=draft.nac||{};
+let cur = store.get("bolao26-cur","SP");
+if(!UF[cur]) cur="SP";
+
+// datalists
+(function(){
+  const mk=(id,list)=>`<datalist id="${id}">${list.map(c=>`<option value="${esc(c.n)}">${esc(c.p)}</option>`).join("")}</datalist>`;
+  let h=mk("dl-pres",parse(PRES));
+  for(const u in UF){h+=mk("dl-g-"+u,parse(UF[u][2]))+mk("dl-s-"+u,parse(UF[u][3]));}
+  $("#dl-pres").remove(); $("#dls").innerHTML=h;
+})();
+
+const CAND={pres:parse(PRES,"BR"),g:{},s:{}};for(const u in UF){CAND.g[u]=parse(UF[u][2],u);CAND.s[u]=parse(UF[u][3],u);}
+function candsFor(type,u){return type==="pres"?CAND.pres:type==="gov"?CAND.g[u]:type==="sen"?CAND.s[u]:null;}
+const otherOpen=new Set();
+function selHTML(id,k,list,val,dis,extra){
+  const v=(val||"").trim(), inList=v&&list.some(c=>norm(c.n)===norm(v));
+  const oth=(v&&!inList)||otherOpen.has(id);
+  let h=`<select id="${id}" data-k="${k}" data-sel="1"${dis?" disabled":""}><option value="">— escolha —</option>`+
+    list.map(c=>`<option value="${esc(c.n)}"${inList&&norm(c.n)===norm(v)?" selected":""}>${esc(c.num)} · ${esc(c.n)} (${esc(c.p)})${c.sj?" · sub judice":""}</option>`).join("")+
+    `<option value="__o"${oth?" selected":""}>Outro (digitar)</option></select>`;
+  if(inList) h+=cardHTML(list.find(c=>norm(c.n)===norm(v)));
+  if(oth) h+=`<input type="text" id="${id}-o" data-k="${k}" value="${esc(inList?"":v)}" placeholder="Digite o nome" autocomplete="off" style="margin-top:6px"${dis?" disabled":""}>`;
+  return h;
+}
+function listFor(type,u){return type==="gov"?"dl-g-"+u:type==="sen"?"dl-s-"+u:type==="pres"?"dl-pres":null;}
+function optsFor(type){return type==="sn"?SN:type==="faixa"?FAIXA:type==="abst"?ABST:null;}
+
+function inputHTML(q,u,val,idp,dis){
+  const id=idp+q.k, o=optsFor(q.type), d=dis?" disabled":"";
+  if(o){
+    return `<div class="field"><span class="qlabel" id="${id}-l">${esc(q.t)}</span><div class="seg" role="radiogroup" aria-labelledby="${id}-l">`+
+      o.map((x,i)=>`<label><input type="radio" name="${id}" data-k="${q.k}" id="${id}-${i}" value="${esc(x)}"${val===x?" checked":""}${d}><span>${esc(x)}</span></label>`).join("")+
+      (val&&!dis?`<label><input type="radio" name="${id}" data-k="${q.k}" id="${id}-x" value=""><span>Limpar</span></label>`:"")+`</div></div>`;
+  }
+  return `<div class="field"><label for="${id}">${esc(q.t)}</label>${selHTML(id,q.k,candsFor(q.type,u),val,dis)}</div>`;
+}
+
+function filledCount(u){const s=draft.uf[u]||{};return SQ.filter(q=>(s[q.k]||"").trim()).length;}
+
+function renderRegions(){
+  let h="";
+  for(const r of REGIONS){
+    h+=`<div class="region"><h3>${r}</h3><div class="chips">`;
+    for(const u of Object.keys(UF).filter(u=>UF[u][1]===r).sort()){
+      const n=filledCount(u), cls=n===SQ.length?"full":n?"has":"";
+      h+=`<button class="chip ${cls}" data-uf="${u}" aria-pressed="${u===cur}" title="${esc(UF[u][0])}">${u}<span class="pg">${n?n+"/"+SQ.length:"—"}</span></button>`;
+    }
+    h+=`</div></div>`;
+  }
+  $("#regions").innerHTML=h;
+  const st=Object.keys(UF).filter(u=>filledCount(u)>0).length;
+  $("#progTotal").textContent=st?`${st} ${st===1?"estado":"estados"} com palpite`:"Nenhum estado preenchido ainda";
+}
+
+function renderState(){
+  const u=cur, s=draft.uf[u]||{}, dis=locked();
+  let h=`<div class="statehead"><h2>${esc(UF[u][0])}<span>${u}</span></h2><span class="hint">${filledCount(u)} de ${SQ.length} respondidas</span></div><div class="qgrid">`;
+  for(const q of QS){
+    if(q.g){h+=`<div class="qgroup">${esc(q.g)}</div>`;continue;}
+    h+=`<div${q.full?' style="grid-column:1/-1"':""}>${inputHTML(q,u,s[q.k],"st-",dis)}</div>`;
+  }
+  h+=`</div>`;
+  $("#statePanel").innerHTML=h;
+}
+
+function renderNac(){
+  const dis=locked();
+  $("#nacGrid").innerHTML=NQ.map(q=>`<div${q.full?' style="grid-column:1/-1"':""}>${inputHTML(q,null,draft.nac[q.k],"na-",dis)}</div>`).join("");
+}
+
+function save(){store.set("bolao26-draft",draft);updateSummary();if(!$("#reviewOut").hidden)renderReview();}
+function updateSummary(){
+  const st=Object.keys(UF).filter(u=>filledCount(u)>0);
+  const n=NQ.filter(q=>(draft.nac[q.k]||"").trim()).length;
+  $("#sealSummary").textContent=`${st.length} estados · ${n}/5 nacionais · zebra ${draft.z.trim()?"✓":"—"}`;
+}
+
+$("#statePanel").addEventListener("input",e=>{
+  const t=e.target; if(!t.dataset.k) return;
+  const k=t.dataset.k; let v=t.value, rer=t.type==="radio";
+  if(t.dataset.sel){ rer=true; if(v==="__o"){otherOpen.add(t.id);v="";} else otherOpen.delete(t.id); }
+  draft.uf[cur]=draft.uf[cur]||{};
+  draft.uf[cur][k]=v;
+  if(!Object.values(draft.uf[cur]).some(v=>(v||"").trim())) delete draft.uf[cur];
+  save();
+  if(rer){renderState();if(t.dataset.sel&&t.value==="__o"){const o=document.getElementById(t.id+"-o");if(o)o.focus();}}
+  else{ $("#statePanel .statehead .hint").textContent=`${filledCount(cur)} de ${SQ.length} respondidas`; }
+  renderRegions();
+});
+$("#nacGrid").addEventListener("input",e=>{
+  const t=e.target; if(!t.dataset.k) return;
+  const k=t.dataset.k; let v=t.value, rer=t.type==="radio";
+  if(t.dataset.sel){ rer=true; if(v==="__o"){otherOpen.add(t.id);v="";} else otherOpen.delete(t.id); }
+  draft.nac[k]=v; save();
+  if(rer){renderNac();if(t.dataset.sel&&t.value==="__o"){const o=document.getElementById(t.id+"-o");if(o)o.focus();}}
+});
+$("#regions").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  cur=b.dataset.uf; store.set("bolao26-cur",cur); renderRegions(); renderState();
+  $("#statePanel").scrollIntoView({behavior:"smooth",block:"start"});
+});
+$("#pname").value=draft.name||"";
+$("#pname").addEventListener("input",e=>{draft.name=e.target.value;save();});
+$("#zebra").value=draft.z||"";
+$("#zebra").addEventListener("input",e=>{draft.z=e.target.value;save();});
+
+// ---------- encoding ----------
+const KEY="urna2026";
+function checksum(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return h.toString(36).slice(-4).padStart(4,"0");}
+function encode(obj){
+  const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  const x=bytes.map((b,i)=>b^KEY.charCodeAt(i%KEY.length)^(i*7&255));
+  let bin="";x.forEach(b=>bin+=String.fromCharCode(b));
+  const b64=btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return "BOLAO26-"+checksum(b64)+"-"+b64;
+}
+function decode(code){
+  const m=String(code).replace(/\s+/g,"").match(/BOLAO26-([0-9a-z]{4})-([A-Za-z0-9_-]+)/);
+  if(!m) throw new Error("Não encontrei um código do bolão aqui. Ele começa com BOLAO26-.");
+  if(checksum(m[2])!==m[1]) throw new Error("O código está incompleto ou foi alterado. Copie de novo a mensagem inteira.");
+  let b64=m[2].replace(/-/g,"+").replace(/_/g,"/"); while(b64.length%4) b64+="=";
+  const bin=atob(b64); const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i)^KEY.charCodeAt(i%KEY.length)^(i*7&255);
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+// ---------- seal ----------
+$("#btnSeal").addEventListener("click",()=>{
+  $("#sealErr").textContent="";
+  if(locked()){$("#sealErr").textContent="Os palpites já estão travados desde domingo às 8h.";return;}
+  if(!(draft.name||"").trim()){$("#sealErr").textContent="Coloque seu nome no topo antes de selar.";$("#pname").focus();return;}
+  const uf={};for(const u in draft.uf){const s={};for(const q of SQ){const v=(draft.uf[u][q.k]||"").trim();if(v)s[q.k]=v;}if(Object.keys(s).length)uf[u]=s;}
+  const nac={};for(const q of NQ){const v=(draft.nac[q.k]||"").trim();if(v)nac[q.k]=v;}
+  if(!Object.keys(uf).length&&!Object.keys(nac).length){$("#sealErr").textContent="Preencha pelo menos uma pergunta antes de selar.";return;}
+  const code=encode({v:1,n:draft.name.trim(),t:Date.now(),uf,nac,z:(draft.z||"").trim()});
+  $("#sealCode").textContent=code; $("#sealOut").hidden=false; $("#copyMsg").textContent="";
+  const d=new Date();
+  $("#copyMsg").textContent="Selado às "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+" de "+d.toLocaleDateString("pt-BR")+". Agora copie e mande no WhatsApp.";
+});
+$("#btnCopy").addEventListener("click",()=>{
+  const txt="🗳️ Meu palpite no Bolão da Urna 2026:\n"+$("#sealCode").textContent;
+  try{
+    navigator.clipboard.writeText(txt).then(()=>{$("#copyMsg").textContent="Código copiado. Cole na conversa do WhatsApp.";},sel);
+  }catch(e){sel();}
+  function sel(){const r=document.createRange();r.selectNodeContents($("#sealCode"));const s=getSelection();s.removeAllRanges();s.addRange(r);$("#copyMsg").textContent="O código está selecionado. Use Copiar do seu aparelho.";}
+});
+function ansCell(q,u,v){const c=findCand(q.type,u,v);return v?`${c?photoHTML(c,"mini"):""}${esc(v)}`:'<span class="hint">—</span>';}
+function reviewTable(title,qs,u,obj){
+  const rows=qs.map(q=>`<tr><td class="q">${esc(q.t)}</td><td class="p">${ansCell(q,u,(obj||{})[q.k])}</td></tr>`).join("");
+  return `<div class="card"><div class="sthead"><h3>${esc(title)}</h3></div><div class="tblwrap"><table style="min-width:0"><tbody>${rows}</tbody></table></div></div>`;
+}
+function renderReview(){
+  const ufs=Object.keys(UF).filter(u=>filledCount(u)>0).sort((a,b)=>UF[a][0].localeCompare(UF[b][0]));
+  let h=`<div class="eyebrow">Resumo de ${esc((draft.name||"").trim()||"você")} · ${ufs.length} ${ufs.length===1?"estado":"estados"}</div>`;
+  h+=reviewTable("Presidente · Brasil",NQ,"BR",draft.nac);
+  for(const u of ufs) h+=reviewTable(UF[u][0]+" · "+u,SQ,u,draft.uf[u]);
+  h+=`<div class="card"><div class="sthead"><h3>Zebra</h3></div><p style="margin:0">${draft.z.trim()?esc(draft.z):'<span class="hint">—</span>'}</p></div>`;
+  $("#reviewOut").innerHTML=h;
+}
+$("#btnReview").addEventListener("click",()=>{
+  const o=$("#reviewOut"); o.hidden=!o.hidden;
+  $("#btnReview").textContent=o.hidden?"Revisar meus palpites":"Fechar resumo";
+  if(!o.hidden){renderReview();o.scrollIntoView({behavior:"smooth",block:"start"});}
+});
+$("#btnClear").addEventListener("click",()=>{$("#clearConfirm").hidden=false;});
+$("#btnClearNo").addEventListener("click",()=>{$("#clearConfirm").hidden=true;});
+$("#btnClearYes").addEventListener("click",()=>{
+  draft={name:draft.name,uf:{},nac:{},z:""};save();$("#zebra").value="";$("#clearConfirm").hidden=true;$("#sealOut").hidden=true;
+  renderRegions();renderState();renderNac();
+});
+
+// ---------- countdown / lock ----------
+function fmtLeft(ms){
+  const s=Math.max(0,Math.floor(ms/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
+  return (d?d+"d ":"")+String(h).padStart(2,"0")+"h "+String(m).padStart(2,"0")+"m "+String(ss).padStart(2,"0")+"s";
+}
+let wasLocked=locked();
+function tick(){
+  const L=locked();
+  if(L){$("#scrLbl").textContent="Situação";$("#scrCount").textContent="TRAVADO";}
+  else{$("#scrLbl").textContent="Palpites fecham em";$("#scrCount").textContent=fmtLeft(LOCK-Date.now());}
+  if(L!==wasLocked){wasLocked=L;applyLock();}
+}
+function applyLock(){
+  const L=locked();
+  const b=$("#lockBanner");
+  if(L){b.hidden=false;b.className="banner bad";b.textContent="Palpites travados desde domingo, 04/10, às 08:00. Agora é esperar a apuração e revelar os códigos.";}
+  else b.hidden=true;
+  $("#pname").disabled=L;$("#zebra").disabled=L;$("#btnSeal").disabled=L;$("#btnClear").disabled=L;
+  renderState();renderNac();renderRevLock();
+}
+function renderRevLock(){
+  const r=$("#revLock"),L=locked();
+  r.className=L?"banner ok":"banner";
+  r.textContent=L?"Revelação liberada. Cole os códigos que vocês mandaram no WhatsApp.":"A revelação abre domingo às 08:00, quando os palpites travam. Até lá, ninguém vê o palpite de ninguém.";
+  $("#btnReveal").disabled=!L;
+}
+
+// ---------- reveal ----------
+let players=[], results=store.get("bolao26-results",{nac:{},uf:{},zb:{}});
+results.nac=Object.assign({},OFFICIAL.nac,results.nac||{});results.uf=results.uf||{};results.zb=results.zb||{};
+for(const u in OFFICIAL.uf){results.uf[u]=Object.assign({},OFFICIAL.uf[u],results.uf[u]||{});}
+let savedCodes=store.get("bolao26-codes",["",""]);
+function renderCodeInputs(){
+  $("#codeInputs").innerHTML=savedCodes.map((c,i)=>`<div class="field"><label for="code-${i}">Jogador ${i+1}</label><textarea id="code-${i}" rows="2" placeholder="Cole aqui o código BOLAO26-…">${esc(c)}</textarea></div>`).join("");
+}
+$("#codeInputs").addEventListener("input",e=>{const i=+e.target.id.split("-")[1];savedCodes[i]=e.target.value;store.set("bolao26-codes",savedCodes);});
+$("#btnAddCode").addEventListener("click",()=>{if(savedCodes.length<6){savedCodes.push("");store.set("bolao26-codes",savedCodes);renderCodeInputs();}});
+$("#btnReveal").addEventListener("click",()=>{
+  $("#revErr").textContent="";
+  if(!locked()){renderRevLock();return;}
+  const ps=[];
+  for(let i=0;i<savedCodes.length;i++){
+    const c=(savedCodes[i]||"").trim(); if(!c) continue;
+    try{const d=decode(c);ps.push(d);}catch(err){$("#revErr").textContent=`Jogador ${i+1}: ${err.message}`;return;}
+  }
+  if(!ps.length){$("#revErr").textContent="Cole pelo menos um código.";return;}
+  players=ps; $("#revOut").hidden=false; renderReveal();
+});
+
+function eq(a,b){return norm(a)&&norm(a)===norm(b);}
+// score one answer: returns {pts, st:'hit'|'miss'|'pend'|'none'}
+function scoreQ(q,ans,res,resPair,ansPair){
+  const a=(ans||"").trim(); if(!a) return {pts:0,st:"none"};
+  const val=PTS[q.pts];
+  if(q.pair){
+    const set=[res,resPair].map(norm).filter(Boolean);
+    if(!set.length) return {pts:0,st:"pend"};
+    if(q.k==="gb"||q.k==="s2"||q.k==="nb"){ if(eq(a,ansPair)) return {pts:0,st:"miss"}; }
+    return set.includes(norm(a))?{pts:val,st:"hit"}:{pts:0,st:"miss"};
+  }
+  if(!(res||"").trim()) return {pts:0,st:"pend"};
+  return eq(a,res)?{pts:val,st:"hit"}:{pts:0,st:"miss"};
+}
+function scoreAll(){
+  return players.map((p,i)=>{
+    let tot=0,hits=0,byUF={},nac=0;
+    for(const u in UF){
+      const a=(p.uf||{})[u]; if(!a) continue; const r=results.uf[u]||{}; let s=0;
+      for(const q of SQ){const x=scoreQ(q,a[q.k],r[q.k],q.pair?r[q.pair]:"",q.pair?a[q.pair]:"");s+=x.pts;if(x.st==="hit")hits++;}
+      byUF[u]=s; tot+=s;
+    }
+    for(const q of NQ){const x=scoreQ(q,(p.nac||{})[q.k],results.nac[q.k],q.pair?results.nac[q.pair]:"",q.pair?(p.nac||{})[q.pair]:"");nac+=x.pts;if(x.st==="hit")hits++;}
+    tot+=nac;
+    const zb=p.z&&results.zb[i]?PTS.zebra:0; tot+=zb; if(zb)hits++;
+    return {tot,hits,byUF,nac,zb};
+  });
+}
+function resInput(q,u,val,path){
+  const o=optsFor(q.type), id="r-"+path+"-"+q.k;
+  if(o) return `<select id="${id}" data-path="${path}" data-k="${q.k}"><option value="">—</option>${o.map(x=>`<option${val===x?" selected":""}>${esc(x)}</option>`).join("")}</select>`;
+  const base=candsFor(q.type,u).slice(), seen=new Set(base.map(c=>norm(c.n)));
+  for(const p of players){const a=path==="nac"?(p.nac||{}):((p.uf||{})[u]||{});const x=(a[q.k]||"").trim();if(x&&!seen.has(norm(x))){seen.add(norm(x));base.push({n:x,p:""});}}
+  if(val&&!seen.has(norm(val)))base.push({n:val,p:""});
+  return `<select id="${id}" data-path="${path}" data-k="${q.k}"><option value="">—</option>${base.map(c=>`<option value="${esc(c.n)}"${norm(c.n)===norm(val)?" selected":""}>${esc(c.n)}</option>`).join("")}</select>`;
+}
+function tableFor(title,sub,qs,u,getAns,resObj,path,scores){
+  const heads=players.map((p,i)=>`<th>${esc(p.n)}</th>`).join("");
+  let rows="";
+  for(const q of qs){
+    const cells=players.map(p=>{const a=getAns(p)||{};const x=scoreQ(q,a[q.k],resObj[q.k],q.pair?resObj[q.pair]:"",q.pair?a[q.pair]:"");
+      const cls=x.st==="hit"?"hit":x.st==="miss"?"miss":"";const cc=findCand(q.type,u||"BR",a[q.k]);return `<td class="p ${cls}">${cc?photoHTML(cc,"mini"):""}${esc(a[q.k]||"—")}${x.st==="hit"?` <span class="pill on">+${x.pts}</span>`:""}</td>`;}).join("");
+    rows+=`<tr><td class="q">${esc(q.t)}</td>${cells}<td class="res">${resInput(q,u,resObj[q.k],path)}</td></tr>`;
+  }
+  return `<div class="card"><div class="sthead"><h3>${esc(title)}</h3><span class="mini">${sub}</span></div><div class="tblwrap"><table><thead><tr><th>Pergunta</th>${heads}<th>Resultado</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function renderScoreCards(sc){
+  const max=Math.max(...sc.map(s=>s.tot));
+  $("#scoreCards").innerHTML=players.map((p,i)=>{
+    const lead=sc[i].tot===max&&max>0;
+    const when=new Date(p.t);
+    const late=p.t>LOCK;
+    return `<div class="pcard${lead?" lead":""}"><div class="nm">${esc(p.n)} ${lead?'<span class="pill on">na frente</span>':""}</div><div class="pts">${sc[i].tot}</div><div class="meta">${sc[i].hits} acertos · selado ${when.toLocaleDateString("pt-BR")} ${when.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}${late?' · <b style="color:var(--bad)">depois do prazo</b>':""}</div></div>`;
+  }).join("");
+  $("#scoreNote").textContent=max>0?"Atualiza conforme você preenche os resultados":"Aguardando resultados";
+}
+function renderReveal(){
+  const sc=scoreAll();
+  renderScoreCards(sc);
+  const ufs=Object.keys(UF).filter(u=>players.some(p=>(p.uf||{})[u])).sort((a,b)=>UF[a][0].localeCompare(UF[b][0]));
+  let h=tableFor("Nacional","Presidente",NQ,null,p=>p.nac,results.nac,"nac",sc);
+  for(const u of ufs){
+    results.uf[u]=results.uf[u]||{};
+    const sub=players.map((p,i)=>(p.uf||{})[u]?`${esc(p.n)} ${sc[i].byUF[u]||0} pts`:`${esc(p.n)} não palpitou`).join(" · ");
+    h+=tableFor(UF[u][0]+" · "+u,sub,SQ,u,p=>(p.uf||{})[u],results.uf[u],u,sc);
+  }
+  // zebras
+  const zrows=players.map((p,i)=>`<tr><td class="p">${esc(p.n)}</td><td>${esc(p.z||"—")}</td><td class="res">${p.z?`<select id="zb-${i}" data-zb="${i}"><option value="">Ainda não</option><option value="1"${results.zb[i]?" selected":""}>Aconteceu</option></select>`:"—"}</td></tr>`).join("");
+  h+=`<div class="card"><div class="sthead"><h3>Zebras</h3><span class="mini">4 pontos cada · decidam juntos</span></div><div class="tblwrap"><table><thead><tr><th>Jogador</th><th>Zebra</th><th>Resultado</th></tr></thead><tbody>${zrows}</tbody></table></div></div>`;
+  const ae=document.activeElement, aid=ae&&ae.id, pos=ae&&ae.selectionStart;
+  $("#revTables").innerHTML=h;
+  if(aid){const el=document.getElementById(aid);if(el){el.focus();try{if(pos!=null)el.setSelectionRange(pos,pos);}catch(e){}}}
+}
+let rt;
+$("#revTables").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.zb!=null){results.zb[t.dataset.zb]=!!t.value;}
+  else if(t.dataset.path){const obj=t.dataset.path==="nac"?results.nac:(results.uf[t.dataset.path]=results.uf[t.dataset.path]||{});obj[t.dataset.k]=t.value;}
+  else return;
+  store.set("bolao26-results",results);
+  clearTimeout(rt); rt=setTimeout(renderReveal, t.tagName==="SELECT"?0:500);
+});
+$("#revTables").addEventListener("change",e=>{if(e.target.tagName==="INPUT"){clearTimeout(rt);renderReveal();}});
+
+// ---------- tabs ----------
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
+  for(const v of ["palp","rev","reg"]) $("#v-"+v).hidden=v!==t.dataset.view;
+}));
+
+// rules table
+$("#ptable").innerHTML=[["Vencedor para governador",PTS.gv],["Acertar se vai ter 2º turno (estado ou presidente)",PTS.seg],["Cada nome certo entre os dois mais votados do 1º turno",PTS.nome],["Cada senador eleito acertado",PTS.sen],["Senador mais votado",PTS.sm],["Vencedor para presidente no estado",PTS.pv],["Faixa de percentual certa",PTS.faixa],["Abstenção nacional",PTS.ab],["Zebra que acontecer",PTS.zebra]].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
+
+renderRegions();renderState();renderNac();updateSummary();renderCodeInputs();applyLock();tick();
+setInterval(tick,1000);
+window.__bolao={encode,decode,scoreQ};
+})();
+</script>
+
+</body>
+</html>
